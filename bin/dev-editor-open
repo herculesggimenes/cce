@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CCE_BIN="${CCE_BIN:-$HOME/.local/bin/cce}"
+exec "$CCE_BIN" open "$@"

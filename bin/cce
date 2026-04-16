@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOME_BIN="${HOME}/.cargo/bin/cce"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [ -x "$HOME_BIN" ]; then
+  exec "$HOME_BIN" "$@"
+fi
+
+for candidate in "$REPO_ROOT/target/release/cce" "$REPO_ROOT/target/debug/cce"; do
+  if [ -x "$candidate" ]; then
+    exec "$candidate" "$@"
+  fi
+done
+
+echo "cce binary not found. Run: cargo install --path $REPO_ROOT/crates/cce-cli --force" >&2
+exit 1

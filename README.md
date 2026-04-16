@@ -31,7 +31,10 @@ Optional local setup:
 
 ```sh
 mkdir -p ~/.local/bin
-ln -sf ~/.cargo/bin/cce ~/.local/bin/cce
+ln -sf "$HOME/src/cce/bin/cce" ~/.local/bin/cce
+ln -sf "$HOME/src/cce/bin/dev-editor" ~/.local/bin/dev-editor
+ln -sf "$HOME/src/cce/bin/dev-editor-open" ~/.local/bin/dev-editor-open
+ln -sf "$HOME/src/cce/bin/zed" ~/.local/bin/zed
 ```
 
 To install the macOS app shims:
