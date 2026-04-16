@@ -69,6 +69,19 @@ fn run_checked_output(program: &str, args: &[&str]) -> Result<String> {
     }
 }
 
+fn tmux_window_target(pane_id: &str) -> Result<String> {
+    run_checked_output(
+        "tmux",
+        &[
+            "display-message",
+            "-p",
+            "-t",
+            pane_id,
+            "#{session_name}:#{window_index}",
+        ],
+    )
+}
+
 fn tmux_session_exists(session_name: &str) -> bool {
     if which("tmux").is_none() {
         return false;
@@ -141,11 +154,52 @@ fn open_ghostty_with_command(ghostty_app: &str, shell_command: &str) {
         .spawn();
 }
 
+fn ghostty_application_name(ghostty_app: &str) -> String {
+    let candidate = Path::new(ghostty_app)
+        .file_stem()
+        .or_else(|| Path::new(ghostty_app).file_name())
+        .and_then(|name| name.to_str())
+        .unwrap_or(ghostty_app);
+    candidate
+        .strip_suffix(".app")
+        .unwrap_or(candidate)
+        .to_string()
+}
+
+fn activate_terminal_app(ghostty_app: &str) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+
+    let app_name = ghostty_application_name(ghostty_app);
+    let script = format!(
+        "tell application \"{}\" to activate",
+        app_name.replace('\\', "\\\\").replace('"', "\\\"")
+    );
+
+    let activated = Command::new("osascript")
+        .args(["-e", &script])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+
+    if !activated {
+        let _ = Command::new("open")
+            .args(["-a", ghostty_app])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+    }
+}
+
 fn maybe_attach_ghostty(config: &AppConfig, session_name: &str, panes_text: &str) {
     if env::var("TMUX").is_ok() {
         return;
     }
     if tmux_session_is_attached(session_name, Some(panes_text)) {
+        activate_terminal_app(&config.launcher.ghostty_app);
         return;
     }
     let command = format!("exec tmux attach-session -t {}", shell_quote(session_name));
@@ -175,6 +229,7 @@ pub fn launch_tmux_nvim(
         .filter(|name| !name.is_empty())
         .unwrap_or("nvim");
     let pane_id = new_tmux_window(session_name, workdir, window_name)?;
+    let window_target = tmux_window_target(&pane_id)?;
 
     let mut nvim_command = shell_join(nvim_argv);
     let mut status_path = None;
@@ -201,6 +256,7 @@ pub fn launch_tmux_nvim(
     }
 
     run_checked("tmux", &["send-keys", "-t", &pane_id, &nvim_command, "C-m"])?;
+    run_checked("tmux", &["select-window", "-t", &window_target])?;
     run_checked("tmux", &["select-pane", "-t", &pane_id])?;
     maybe_attach_ghostty(config, session_name, panes_text);
 
@@ -285,4 +341,19 @@ pub fn launch_session_restore(
         false,
         &panes_text,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ghostty_application_name;
+
+    #[test]
+    fn ghostty_application_name_strips_bundle_suffixes_and_paths() {
+        assert_eq!(ghostty_application_name("Ghostty.app"), "Ghostty");
+        assert_eq!(
+            ghostty_application_name("/Applications/Ghostty.app"),
+            "Ghostty"
+        );
+        assert_eq!(ghostty_application_name("Ghostty"), "Ghostty");
+    }
 }
