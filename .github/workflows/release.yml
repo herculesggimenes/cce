@@ -10,29 +10,36 @@ permissions:
 
 jobs:
   build-macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-13
-            arch: x86_64
-          - runner: macos-14
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - name: Test
         run: cargo test
-      - name: Build
-        run: cargo build --release -p cce
-      - name: Package release bundle
-        run: ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME#v}" "${{ matrix.arch }}" "target/release/cce"
+      - name: Build arm64
+        run: cargo build --release -p cce --target aarch64-apple-darwin
+      - name: Build x86_64
+        run: cargo build --release -p cce --target x86_64-apple-darwin
+      - name: Build universal binary
+        run: |
+          mkdir -p target/universal-release
+          lipo -create \
+            target/aarch64-apple-darwin/release/cce \
+            target/x86_64-apple-darwin/release/cce \
+            -output target/universal-release/cce
+      - name: Package release bundles
+        run: |
+          ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME#v}" "arm64" "target/aarch64-apple-darwin/release/cce"
+          ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME#v}" "x86_64" "target/x86_64-apple-darwin/release/cce"
+          ./scripts/build-release-bundle.sh "${GITHUB_REF_NAME#v}" "universal" "target/universal-release/cce"
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          overwrite_files: true
           files: |
             dist/*.tar.gz
             dist/*.sha256
