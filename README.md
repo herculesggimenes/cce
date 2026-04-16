@@ -27,6 +27,29 @@ The original implementation lived in dotfiles and used Python for routing. This 
 cargo install --path crates/cce-cli
 ```
 
+## Releases
+
+Tagged releases produce macOS tarballs on GitHub Releases for both Intel and
+Apple Silicon.
+
+Download a release asset, extract it, and run:
+
+```sh
+./install.sh
+```
+
+That installs:
+
+- `~/.local/bin/cce`
+- `~/.local/bin/dev-editor`
+- `~/.local/bin/dev-editor-open`
+- `~/.local/bin/zed`
+- `~/Applications/CCE.app`
+- `~/Applications/Zed.app`
+
+Current release artifacts are unsigned, so macOS may require an explicit first
+run approval.
+
 Optional local setup:
 
 ```sh
@@ -65,6 +88,13 @@ Keys:
 cargo fmt
 cargo test
 cargo run -p cce -- dashboard .
+```
+
+To build a local macOS release bundle:
+
+```sh
+cargo build --release -p cce
+./scripts/build-release-bundle.sh 0.1.0 local target/release/cce
 ```
 
 ## License
