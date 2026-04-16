@@ -102,7 +102,8 @@ mod tests {
 
     #[test]
     fn open_plan_live_match_routes_into_tmux_without_codex_split() {
-        let config = AppConfig::default();
+        let mut config = AppConfig::default();
+        config.launcher.nvim_bin = "nvim".to_string();
         let live_cwd = PathBuf::from("/tmp/live-worktree");
         let live_sessions = vec![LiveSessionEntry {
             id: "abc123".to_string(),
