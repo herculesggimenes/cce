@@ -1,0 +1,8 @@
+[launcher]
+ghostty_app = "Ghostty.app"
+nvim_bin = ""
+tmux_default_session = "main"
+tmux_window_prefix = "cce"
+
+[install]
+install_zed_shim = true
